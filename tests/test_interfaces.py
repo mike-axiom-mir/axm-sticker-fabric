@@ -47,6 +47,9 @@ class InterfaceProfileTests(unittest.TestCase):
         duplicate=copy.deepcopy(profile);duplicate['ports'][1]['id']='left'
         with self.assertRaisesRegex(ValueError,'unique'):
             validate_profile(duplicate)
+        malformed=copy.deepcopy(profile);malformed['ports'][0]['accepts']=[[]]
+        with self.assertRaises(ValueError):
+            validate_profile(malformed)
 
     def test_interface_and_mutual_roles_are_both_required(self):
         beam=interface_profile(definition('beam'),[
