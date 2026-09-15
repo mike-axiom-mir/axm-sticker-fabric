@@ -8,6 +8,7 @@ from .connections import save_connection_plan, solve_connection_plan
 from .closures import save_closed_connection_plan, verify_loop_closures
 from .interfaces import InterfaceCatalog
 from .occupancy import occupancy_slots, save_occupancy_plan, solve_occupancy_plan
+from .selection import extract_selection, save_selection_as_sticker, selection_manifest
 
 
 def main(argv=None):
@@ -25,7 +26,8 @@ def main(argv=None):
                           'dependencies','dependents','describe','stats','interface_compatible',
                           'solve_connection_plan','save_connection_plan','verify_loop_closures',
                           'save_closed_connection_plan','occupancy_slots','solve_occupancy_plan',
-                          'save_occupancy_plan'}:
+                          'save_occupancy_plan','selection_manifest','extract_selection',
+                          'save_selection_as_sticker'}:
         parser.error('unknown operation')
     with Registry(args.database) as registry:
         functions={'save_assembly':save_assembly,'library_bundle':library_bundle,
@@ -66,6 +68,15 @@ def main(argv=None):
             profiles=request.pop('profile_library'); occupancies=request.pop('occupancy_library')
             plan=request.pop('plan')
             result=save_occupancy_plan(registry,profiles,occupancies,plan,**request)
+        elif operation=='selection_manifest':
+            result=selection_manifest(registry,request.pop('source'))
+            if request: raise TypeError('unexpected selection_manifest arguments')
+        elif operation=='extract_selection':
+            result=extract_selection(registry,request.pop('selection'))
+            if request: raise TypeError('unexpected extract_selection arguments')
+        elif operation=='save_selection_as_sticker':
+            selection=request.pop('selection')
+            result=save_selection_as_sticker(registry,selection,**request)
         else:
             result = getattr(registry,operation)(**request)
     print(json.dumps(result,ensure_ascii=False,allow_nan=False))
