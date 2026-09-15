@@ -74,7 +74,7 @@ python tools/build_microforge_library.py microforge-library.json
 
 That emits a real `axm.sticker-library/v1` bundle with 12 original rigid GLB
 micro-parts, each retaining its exact editable procedural JSON source, three
-reusable saved modules, and one nested demo. The 16 definitions expand to 65
+reusable saved modules, and one nested demo. The 16 definitions expand to 67
 placed records while shared source assets remain stored once by digest.
 
 The generated output is deliberately reproducible rather than checked in as a
@@ -88,7 +88,7 @@ for what this exercise proves and the concrete v1 limits it exposed.
 - Executable registry, parameter controls, placement math, dependency closure.
 - Graph-aware discovery for reusable assembly/creative dependencies and reverse use.
 - Deterministic Microforge authoring: 12 rigid micro-parts, three modules and a
-  65-record nested composition with retained editable source.
+  67-record nested composition with retained editable source.
 - Save groups, portable libraries, batch registration and machine/human CLI.
 - Standard-library tests and independent installed-package CI.
 - Pinned upstream origin, license, and file hashes in `UPSTREAM.json` / `NOTICE`.
