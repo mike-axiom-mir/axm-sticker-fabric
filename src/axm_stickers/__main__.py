@@ -5,6 +5,7 @@ from pathlib import Path
 from .core import Registry, instance
 from .assembly import save_assembly, library_bundle, import_library
 from .connections import save_connection_plan, solve_connection_plan
+from .closures import save_closed_connection_plan, verify_loop_closures
 from .interfaces import InterfaceCatalog
 
 
@@ -21,7 +22,8 @@ def main(argv=None):
     if operation not in {'search','get','register','register_many','bundle','import_bundle',
                           'save_assembly','library_bundle','import_library','instance',
                           'dependencies','dependents','describe','stats','interface_compatible',
-                          'solve_connection_plan','save_connection_plan'}:
+                          'solve_connection_plan','save_connection_plan','verify_loop_closures',
+                          'save_closed_connection_plan'}:
         parser.error('unknown operation')
     with Registry(args.database) as registry:
         functions={'save_assembly':save_assembly,'library_bundle':library_bundle,
@@ -43,6 +45,13 @@ def main(argv=None):
         elif operation=='save_connection_plan':
             profiles=request.pop('profile_library'); plan=request.pop('plan')
             result=save_connection_plan(registry,profiles,plan,**request)
+        elif operation=='verify_loop_closures':
+            profiles=request.pop('profile_library'); closure_set=request.pop('closure_set')
+            if request: raise TypeError('unexpected verify_loop_closures arguments')
+            result=verify_loop_closures(registry,profiles,closure_set)
+        elif operation=='save_closed_connection_plan':
+            profiles=request.pop('profile_library'); closure_set=request.pop('closure_set')
+            result=save_closed_connection_plan(registry,profiles,closure_set,**request)
         else:
             result = getattr(registry,operation)(**request)
     print(json.dumps(result,ensure_ascii=False,allow_nan=False))
