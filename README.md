@@ -63,10 +63,32 @@ Example request:
 }
 ```
 
+## Microforge: small pieces into larger assets
+
+The first dedicated small-part growth set is generated with only the Python
+standard library:
+
+```sh
+python tools/build_microforge_library.py microforge-library.json
+```
+
+That emits a real `axm.sticker-library/v1` bundle with 12 original rigid GLB
+micro-parts, each retaining its exact editable procedural JSON source, three
+reusable saved modules, and one nested demo. The 16 definitions expand to 65
+placed records while shared source assets remain stored once by digest.
+
+The generated output is deliberately reproducible rather than checked in as a
+second ~base64 copy of its binary sources. `examples/microforge-summary.json`
+pins the expected root digest, IDs and counts, and CI regenerates/imports the
+full library. See [`docs/MICROFORGE_EVIDENCE.md`](docs/MICROFORGE_EVIDENCE.md)
+for what this exercise proves and the concrete v1 limits it exposed.
+
 ## What this seed contains
 
 - Executable registry, parameter controls, placement math, dependency closure.
 - Graph-aware discovery for reusable assembly/creative dependencies and reverse use.
+- Deterministic Microforge authoring: 12 rigid micro-parts, three modules and a
+  65-record nested composition with retained editable source.
 - Save groups, portable libraries, batch registration and machine/human CLI.
 - Standard-library tests and independent installed-package CI.
 - Pinned upstream origin, license, and file hashes in `UPSTREAM.json` / `NOTICE`.
@@ -88,7 +110,7 @@ pinned formats and existing files. Store libraries, not one file per placement.
 
 See `AGENTS.md` for the four-root merge gate and `UPSTREAM.json` for provenance.
 
-Import the shipped example with Python:
+Import the shipped Rivetwing example with Python:
 
 ```python
 import json
@@ -98,4 +120,6 @@ with Registry("parts.sqlite") as registry:
     import_library(registry, json.load(open("examples/rivetwing-library.json")))
 ```
 
-Then UC can export it through `axm-sticker-create` without installing this repo.
+Or generate Microforge and import the resulting JSON the same way. UC can consume
+compatible libraries through `axm-sticker-create` without this registry becoming
+a required UC service.
