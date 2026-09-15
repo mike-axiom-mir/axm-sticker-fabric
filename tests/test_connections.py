@@ -1,5 +1,8 @@
 import copy
+from contextlib import redirect_stdout
 import importlib.util
+import io
+import json
 from pathlib import Path
 import tempfile
 import unittest
@@ -7,6 +10,7 @@ import unittest
 from axm_stickers import (InterfaceCatalog, Registry, digest, interface_profile,
                           save_connection_plan, solve_connection_plan,
                           validate_connection_plan)
+from axm_stickers.__main__ import main as cli_main
 from axm_stickers.assembly import expand, import_library, library_bundle
 from axm_stickers.connections import PLAN
 from axm_stickers.interfaces import PROFILE_LIBRARY
@@ -112,6 +116,33 @@ class ConnectionPlanTests(unittest.TestCase):
             registry.register(d)
             with self.assertRaisesRegex(ValueError,'pin does not match'):
                 solve_connection_plan(registry,profiles,drift)
+
+    def test_cli_exposes_discovery_solve_and_save_without_uc(self):
+        beam=definition('beam');brace=definition('brace')
+        profiles={'schema':PROFILE_LIBRARY,'profiles':[
+            interface_profile(beam,[named('right','structure',['brace'],.75)]),
+            interface_profile(brace,[named('left','brace',['structure'],-.4)]),
+        ]}
+        plan={'schema':PLAN,'root':{'instance':'beam','frame':identity()},
+              'instances':[{'id':'beam','sticker':pin(beam)},{'id':'brace','sticker':pin(brace)}],
+              'connections':[{'a':endpoint('beam','right'),'b':endpoint('brace','left')}]}
+        with tempfile.TemporaryDirectory() as temp:
+            root=Path(temp);database=root/'parts.sqlite';request=root/'request.json'
+            with Registry(database) as registry: registry.register_many([beam,brace])
+            def call(value):
+                request.write_text(json.dumps(value),encoding='utf-8')
+                output=io.StringIO()
+                with redirect_stdout(output): cli_main([str(database),str(request)])
+                return json.loads(output.getvalue())
+            discovered=call({'operation':'interface_compatible','profile_library':profiles,
+                             'sticker_id':'beam','version':1,'port_id':'right'})
+            self.assertEqual(discovered['entries'][0]['sticker']['id'],'brace')
+            solved=call({'operation':'solve_connection_plan','profile_library':profiles,'plan':plan})
+            self.assertAlmostEqual({x['instance']:x['frame'] for x in solved['frames']}['brace'][3],1.15)
+            saved=call({'operation':'save_connection_plan','profile_library':profiles,'plan':plan,
+                        'id':'cli-joined','name':'CLI joined','origin':beam['origin']})
+            self.assertEqual(saved['adapter'],'axm.sticker.assembly-3d/v1')
+            with Registry(database) as registry: self.assertEqual(len(expand(registry,registry.get('cli-joined',1))),3)
 
     def test_microforge_plans_cover_structural_and_axle_graphs(self):
         library_tool=load_tool('build_microforge_library')
