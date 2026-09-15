@@ -83,12 +83,36 @@ pins the expected root digest, IDs and counts, and CI regenerates/imports the
 full library. See [`docs/MICROFORGE_EVIDENCE.md`](docs/MICROFORGE_EVIDENCE.md)
 for what this exercise proves and the concrete v1 limits it exposed.
 
+## Experimental named interfaces
+
+Microforge now also exercises multiple named rigid anchors and connection-role
+compatibility without changing `axm.sticker/v1`:
+
+```sh
+python tools/build_microforge_interfaces.py microforge-interfaces.json
+```
+
+The companion `axm.sticker-interface-profile/v0.1` format pins one exact sticker
+version and gives it named rigid ports. Each port declares an `interface`, a
+`role`, which peer roles it accepts, and its local mating frame. A valid match
+requires the same interface plus mutual role acceptance; tags alone are not
+considered proof of compatibility.
+
+Mating computes an ordinary rigid v1 assembly target. Once that target is saved,
+the resulting assembly replays without requiring the experimental profile layer.
+This lets the fabric test richer authoring semantics without silently rewriting
+existing stickers or bundle formats. Microforge currently exposes 12 profiles
+with 28 named ports. See [`docs/NAMED_INTERFACES_EXPERIMENT.md`](docs/NAMED_INTERFACES_EXPERIMENT.md)
+and `examples/microforge-interface-summary.json`.
+
 ## What this seed contains
 
 - Executable registry, parameter controls, placement math, dependency closure.
 - Graph-aware discovery for reusable assembly/creative dependencies and reverse use.
 - Deterministic Microforge authoring: 12 rigid micro-parts, three modules and a
   67-record nested composition with retained editable source.
+- Experimental exact-pin named interface profiles with multiple anchors and
+  machine-checkable mutual connection roles.
 - Save groups, portable libraries, batch registration and machine/human CLI.
 - Standard-library tests and independent installed-package CI.
 - Pinned upstream origin, license, and file hashes in `UPSTREAM.json` / `NOTICE`.
