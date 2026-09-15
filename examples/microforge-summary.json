@@ -1,0 +1,42 @@
+{
+  "schema": "axm.microforge-example/v1",
+  "generator": "tools/build_microforge_library.py",
+  "output_schema": "axm.sticker-library/v1",
+  "root": {
+    "id": "microforge-demo",
+    "version": 1,
+    "digest": "10aa7964049826d355002a36ff4531de6d81872744158bed7432a95d5896a9d8"
+  },
+  "counts": {
+    "primitive_definitions": 12,
+    "module_definitions": 3,
+    "root_definitions": 1,
+    "total_definitions": 16,
+    "exact_assets": 24,
+    "expanded_records": 67
+  },
+  "parts": [
+    "micro-cube",
+    "micro-plate",
+    "micro-beam",
+    "micro-column",
+    "micro-brace",
+    "micro-pin",
+    "micro-axle",
+    "micro-hub",
+    "micro-wheel",
+    "micro-disc",
+    "micro-cap",
+    "micro-marker"
+  ],
+  "modules": [
+    "micro-corner-module",
+    "micro-wheel-module",
+    "micro-panel-module"
+  ],
+  "truth_boundary": [
+    "The GLBs are deterministic original geometry and retain exact editable procedural JSON sources.",
+    "Structural GLB and sticker-contract checks do not prove rendered appearance, aesthetics, physics, collision, or game-engine acceptance.",
+    "The example deliberately uses the existing single mount socket and uniform 3D instance-scale contract; it does not imply those are sufficient for every future asset."
+  ]
+}
