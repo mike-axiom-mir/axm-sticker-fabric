@@ -1,10 +1,15 @@
 """Portable sticker definitions and registry; Python standard library only."""
 from .core import Registry, digest, instance, resolve, validate
 from .placement import attachment_matrix, placement_2d
-from .interfaces import (assembly_target, interface_profile, match_interfaces,
-                         mate_frame, validate_profile, validate_profile_library)
+from .interfaces import (InterfaceCatalog, assembly_target, interface_profile,
+                         match_interfaces, mate_frame, validate_profile,
+                         validate_profile_library)
+from .connections import (compile_connection_plan, save_connection_plan,
+                          solve_connection_plan, validate_connection_plan)
 
 __all__ = ['Registry', 'digest', 'instance', 'resolve', 'validate',
-           'attachment_matrix', 'placement_2d', 'assembly_target',
-           'interface_profile', 'match_interfaces', 'mate_frame',
-           'validate_profile', 'validate_profile_library']
+           'attachment_matrix', 'placement_2d', 'InterfaceCatalog',
+           'assembly_target', 'interface_profile', 'match_interfaces', 'mate_frame',
+           'validate_profile', 'validate_profile_library',
+           'compile_connection_plan', 'save_connection_plan',
+           'solve_connection_plan', 'validate_connection_plan']
