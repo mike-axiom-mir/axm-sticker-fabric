@@ -6,10 +6,14 @@ from .interfaces import (InterfaceCatalog, assembly_target, interface_profile,
                          validate_profile_library)
 from .connections import (compile_connection_plan, save_connection_plan,
                           solve_connection_plan, validate_connection_plan)
+from .closures import (save_closed_connection_plan, validate_closure_set,
+                       verify_loop_closures)
 
 __all__ = ['Registry', 'digest', 'instance', 'resolve', 'validate',
            'attachment_matrix', 'placement_2d', 'InterfaceCatalog',
            'assembly_target', 'interface_profile', 'match_interfaces', 'mate_frame',
            'validate_profile', 'validate_profile_library',
            'compile_connection_plan', 'save_connection_plan',
-           'solve_connection_plan', 'validate_connection_plan']
+           'solve_connection_plan', 'validate_connection_plan',
+           'save_closed_connection_plan', 'validate_closure_set',
+           'verify_loop_closures']
