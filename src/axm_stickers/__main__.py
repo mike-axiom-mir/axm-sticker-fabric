@@ -7,6 +7,7 @@ from .assembly import save_assembly, library_bundle, import_library
 from .connections import save_connection_plan, solve_connection_plan
 from .closures import save_closed_connection_plan, verify_loop_closures
 from .interfaces import InterfaceCatalog
+from .occupancy import occupancy_slots, save_occupancy_plan, solve_occupancy_plan
 
 
 def main(argv=None):
@@ -23,7 +24,8 @@ def main(argv=None):
                           'save_assembly','library_bundle','import_library','instance',
                           'dependencies','dependents','describe','stats','interface_compatible',
                           'solve_connection_plan','save_connection_plan','verify_loop_closures',
-                          'save_closed_connection_plan'}:
+                          'save_closed_connection_plan','occupancy_slots','solve_occupancy_plan',
+                          'save_occupancy_plan'}:
         parser.error('unknown operation')
     with Registry(args.database) as registry:
         functions={'save_assembly':save_assembly,'library_bundle':library_bundle,
@@ -39,8 +41,7 @@ def main(argv=None):
             result=catalog.compatible(request.pop('sticker_id'),request.pop('version'),
                                       request.pop('port_id'),**request)
         elif operation=='solve_connection_plan':
-            result=solve_connection_plan(registry,request.pop('profile_library'),
-                                         request.pop('plan'))
+            result=solve_connection_plan(registry,request.pop('profile_library'),request.pop('plan'))
             if request: raise TypeError('unexpected solve_connection_plan arguments')
         elif operation=='save_connection_plan':
             profiles=request.pop('profile_library'); plan=request.pop('plan')
@@ -52,6 +53,19 @@ def main(argv=None):
         elif operation=='save_closed_connection_plan':
             profiles=request.pop('profile_library'); closure_set=request.pop('closure_set')
             result=save_closed_connection_plan(registry,profiles,closure_set,**request)
+        elif operation=='occupancy_slots':
+            result=occupancy_slots(registry,request.pop('profile_library'),
+                                   request.pop('occupancy_library'),request.pop('sticker_id'),
+                                   request.pop('version'),request.pop('port_id'))
+            if request: raise TypeError('unexpected occupancy_slots arguments')
+        elif operation=='solve_occupancy_plan':
+            result=solve_occupancy_plan(registry,request.pop('profile_library'),
+                                        request.pop('occupancy_library'),request.pop('plan'))
+            if request: raise TypeError('unexpected solve_occupancy_plan arguments')
+        elif operation=='save_occupancy_plan':
+            profiles=request.pop('profile_library'); occupancies=request.pop('occupancy_library')
+            plan=request.pop('plan')
+            result=save_occupancy_plan(registry,profiles,occupancies,plan,**request)
         else:
             result = getattr(registry,operation)(**request)
     print(json.dumps(result,ensure_ascii=False,allow_nan=False))
