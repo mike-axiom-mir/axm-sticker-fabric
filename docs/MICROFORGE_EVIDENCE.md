@@ -22,8 +22,10 @@ every placement. `examples/microforge-summary.json` pins the expected root diges
 counts and IDs without storing a second large base64 copy of the generated bundle.
 
 The generator uses only the Python standard library and is an authoring tool,
-not a registry runtime dependency. The registry still does not render, generate,
-or execute creative recipes.
+not a registry runtime dependency. Geometry values derived from trigonometry or
+normalization are quantized to 12 decimal places before canonical serialization;
+this prevents host math-library noise from silently changing exact GLB hashes.
+The registry still does not render, generate, or execute creative recipes.
 
 ## Evidence checked in CI
 
@@ -31,6 +33,11 @@ or execute creative recipes.
 byte-identical JSON output. It then imports that output through the real Registry,
 expands the root assembly, exercises graph search and reverse-use discovery, and
 exports the exact dependency closure again.
+
+The same summary/root digest assertion runs in the repository's Python 3.11 and
+3.13 jobs on both Ubuntu and Windows. A platform that emits different canonical
+Microforge bytes therefore fails the evidence gate instead of being accepted as
+approximately equivalent.
 
 For every rigid part the test also verifies:
 
