@@ -87,7 +87,8 @@ def _known_dependencies(definition):
     records = []
     try:
         if definition['adapter'] == ASSEMBLY_ADAPTER:
-            if set(recipe) != {'children'} or not isinstance(recipe['children'], list):
+            if (set(recipe) != {'children'} or not isinstance(recipe['children'], list) or
+                    not 1 <= len(recipe['children']) <= 4096):
                 return [], 'malformed'
             for position, child in enumerate(recipe['children']):
                 if not isinstance(child, dict) or 'instance' not in child:
@@ -472,21 +473,26 @@ class Registry:
                 'dependencies':{'index_state':deps['index_state'],'entries':deps['entries']},
                 'dependents':{'count':dependent_count}}
 
-    def stats(self):
+    def stats(self,*,adapter_limit=256):
+        if type(adapter_limit) is not int or not 1 <= adapter_limit <= 4096:
+            raise ValueError('adapter_limit must be 1..4096')
         sticker_versions=self.db.execute('SELECT count(*) FROM stickers').fetchone()[0]
         sticker_ids=self.db.execute('SELECT count(DISTINCT id) FROM stickers').fetchone()[0]
         assets=self.db.execute('SELECT count(*),coalesce(sum(length(body)),0) FROM assets').fetchone()
         links=self.db.execute('SELECT count(*) FROM links').fetchone()[0]
         by_space={row['space']:row['n'] for row in self.db.execute(
             'SELECT space,count(*) AS n FROM discovery GROUP BY space ORDER BY space')}
-        by_adapter={row['adapter']:row['n'] for row in self.db.execute(
-            'SELECT adapter,count(*) AS n FROM stickers GROUP BY adapter ORDER BY adapter')}
+        adapters=self.db.execute(
+            'SELECT adapter,count(*) AS n FROM stickers GROUP BY adapter ORDER BY adapter LIMIT ?',
+            (adapter_limit+1,)).fetchall()
+        by_adapter={row['adapter']:row['n'] for row in adapters[:adapter_limit]}
         states={row['dependency_state']:row['n'] for row in self.db.execute(
             'SELECT dependency_state,count(*) AS n FROM discovery GROUP BY dependency_state ORDER BY dependency_state')}
         return {'schema':REGISTRY_STATS,'registry_version':REGISTRY_VERSION,
                 'stickers':{'ids':sticker_ids,'versions':sticker_versions},
                 'assets':{'count':assets[0],'bytes':assets[1]},'links':links,
-                'by_space':by_space,'by_adapter':by_adapter,'dependency_index':states}
+                'by_space':by_space,'by_adapter':by_adapter,
+                'adapter_truncated':len(adapters)>adapter_limit,'dependency_index':states}
 
     def bundle(self,id,ver):
         definition = self.get(id,ver)
