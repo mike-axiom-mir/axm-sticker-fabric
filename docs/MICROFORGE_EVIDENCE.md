@@ -16,7 +16,7 @@ an `axm.sticker-library/v1` bundle containing:
 - three saved reusable modules: corner, wheel and panel;
 - one nested `microforge-demo` assembly that reuses those modules and primitives.
 
-The 16 definitions expand to 65 placed records. Binary GLBs and editable JSON
+The 16 definitions expand to 67 placed records. Binary GLBs and editable JSON
 sources are retained once by digest in the portable library, not duplicated for
 every placement. `examples/microforge-summary.json` pins the expected root digest,
 counts and IDs without storing a second large base64 copy of the generated bundle.
