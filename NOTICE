@@ -1,0 +1,8 @@
+AXM Sticker Fabric
+
+Initial core copied without code changes from AXM Universal Creation
+https://github.com/mike-axiom-mir/axm-universal-creation
+Commit 084f96deab7f5ea3c63cd65d175ce96e57af4d80
+Source: src/axm_stickers; Apache License 2.0 retained in LICENSE.
+Original Rivetwing example assets retain their CC0-1.0 declarations.
+No third-party mesh or image seed is included.
