@@ -33,6 +33,11 @@ def _roles(value):
     return checked
 
 
+def _compatible(a,b):
+    return (a['interface'] == b['interface'] and
+            b['role'] in a['accepts'] and a['role'] in b['accepts'])
+
+
 def validate_profile(profile, definition=None):
     """Validate one exact-pin multi-port companion profile.
 
@@ -111,11 +116,55 @@ def match_interfaces(a_profile, a_port, b_profile, b_port):
     a = port(a_profile,a_port); b = port(b_profile,b_port)
     if a['interface'] != b['interface']:
         raise ValueError('named ports use different interfaces')
-    if b['role'] not in a['accepts'] or a['role'] not in b['accepts']:
+    if not _compatible(a,b):
         raise ValueError('named port roles do not mutually accept each other')
     return {'schema':MATCH,'interface':a['interface'],
             'a':{'sticker':copy.deepcopy(a_profile['sticker']),'port':a['id'],'role':a['role']},
             'b':{'sticker':copy.deepcopy(b_profile['sticker']),'port':b['id'],'role':b['role']}}
+
+
+class InterfaceCatalog:
+    """Bounded registry-verified discovery over companion interface profiles.
+
+    This is an in-memory authoring index, not a new persistent registry schema.
+    Candidates prove declared interface/role compatibility only; no geometric fit
+    or renderer quality is inferred.
+    """
+    def __init__(self, registry, profile_library):
+        self.library = validate_profile_library(profile_library, registry)
+        self._profiles = {(p['sticker']['id'],p['sticker']['version']):p
+                          for p in self.library['profiles']}
+
+    def profile(self,id,ver):
+        identifier(id); version(ver)
+        try:
+            return copy.deepcopy(self._profiles[(id,ver)])
+        except KeyError:
+            raise ValueError('no named interface profile for sticker version') from None
+
+    def compatible(self,id,ver,port_id,*,after=0,limit=30):
+        if type(after) is not int or after < 0 or type(limit) is not int or not 1 <= limit <= 100:
+            raise ValueError('invalid interface search cursor/limit')
+        source_profile=self.profile(id,ver); source=port(source_profile,port_id)
+        entries=[]; cursor=0
+        for candidate_profile in self.library['profiles']:
+            for candidate in candidate_profile['ports']:
+                cursor += 1
+                if cursor <= after:
+                    continue
+                if _compatible(source,candidate):
+                    entries.append({'sticker':copy.deepcopy(candidate_profile['sticker']),
+                                    'port':candidate['id'],'interface':candidate['interface'],
+                                    'role':candidate['role']})
+                    if len(entries) == limit:
+                        return {'source':{'sticker':copy.deepcopy(source_profile['sticker']),
+                                          'port':source['id'],'interface':source['interface'],
+                                          'role':source['role']},
+                                'entries':entries,'next_cursor':cursor,'complete':False}
+        return {'source':{'sticker':copy.deepcopy(source_profile['sticker']),
+                          'port':source['id'],'interface':source['interface'],
+                          'role':source['role']},
+                'entries':entries,'next_cursor':cursor,'complete':True}
 
 
 def mate_frame(host_profile, host_port, child_profile, child_port, *, host_frame=None):
