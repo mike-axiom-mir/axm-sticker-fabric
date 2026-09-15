@@ -16,7 +16,7 @@ def main(argv=None):
     request = json.loads(raw)
     if not isinstance(request,dict): parser.error('request must be an object')
     operation = request.pop('operation',None)
-    if operation not in {'search','get','register','register_many','bundle','import_bundle','save_assembly','library_bundle','import_library','instance'}:
+    if operation not in {'search','get','register','register_many','bundle','import_bundle','save_assembly','library_bundle','import_library','instance','dependencies','dependents','describe','stats'}:
         parser.error('unknown operation')
     with Registry(args.database) as registry:
         functions={'save_assembly':save_assembly,'library_bundle':library_bundle,'import_library':import_library}
