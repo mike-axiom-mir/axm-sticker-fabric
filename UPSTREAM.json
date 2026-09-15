@@ -1,14 +1,27 @@
 {
   "repository": "mike-axiom-mir/axm-universal-creation",
-  "commit": "084f96deab7f5ea3c63cd65d175ce96e57af4d80",
+  "commit": "16ca4d0685c01e998c3588f702016fffd278ea41",
   "license": "Apache-2.0",
   "files": {
     "src/axm_stickers/__init__.py": "bcb75b0bcdfda906cca5f68c83df6af7c4ff538f3ca0964d1747d077cb0f97ed",
     "src/axm_stickers/__main__.py": "63823207821aa978e317267714fc4b629d88d4b815b00a4c1073d2f908b0f6bc",
-    "src/axm_stickers/assembly.py": "2c4c33e33c3e73b87c91ad1d3807e5741179b135ad91000c8e66addacc0ec7c6",
+    "src/axm_stickers/assembly.py": "16071f0b84ed1eb424fd9eeab8e87aea0d0bd4d01fd278a8766f1f6226c51ef4",
     "src/axm_stickers/core.py": "2daa358da5cf967d3b9e7c19bff09ebfd48b0c0e0019517681ef23ed10701147",
     "src/axm_stickers/placement.py": "1344884f14cbe2fa25617664521291b96c4bde067ba0cba31e043045ca3f1436"
   },
   "policy": "Explicit reviewed adoption only. UC retains its own standalone implementation.",
-  "example_origin": "Original AXM Rivetwing source, CC0-1.0 as declared in the library"
+  "example_origin": "Original AXM Rivetwing source, CC0-1.0 as declared in the library",
+  "adoptions": [
+    {
+      "commit": "084f96deab7f5ea3c63cd65d175ce96e57af4d80",
+      "files": {
+        "src/axm_stickers/__init__.py": "bcb75b0bcdfda906cca5f68c83df6af7c4ff538f3ca0964d1747d077cb0f97ed",
+        "src/axm_stickers/__main__.py": "63823207821aa978e317267714fc4b629d88d4b815b00a4c1073d2f908b0f6bc",
+        "src/axm_stickers/assembly.py": "2c4c33e33c3e73b87c91ad1d3807e5741179b135ad91000c8e66addacc0ec7c6",
+        "src/axm_stickers/core.py": "2daa358da5cf967d3b9e7c19bff09ebfd48b0c0e0019517681ef23ed10701147",
+        "src/axm_stickers/placement.py": "1344884f14cbe2fa25617664521291b96c4bde067ba0cba31e043045ca3f1436"
+      }
+    }
+  ],
+  "adoption_reason": "Retain exact material/effect/layer dependency closure without requiring UC or a renderer."
 }

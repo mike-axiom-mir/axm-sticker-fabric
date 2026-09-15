@@ -6,3 +6,7 @@ Commit 084f96deab7f5ea3c63cd65d175ce96e57af4d80
 Source: src/axm_stickers; Apache License 2.0 retained in LICENSE.
 Original Rivetwing example assets retain their CC0-1.0 declarations.
 No third-party mesh or image seed is included.
+
+Dependency-library update adopted verbatim from AXM Universal Creation
+Commit 16ca4d0685c01e998c3588f702016fffd278ea41
+Source: src/axm_stickers/assembly.py; Apache License 2.0 retained.
