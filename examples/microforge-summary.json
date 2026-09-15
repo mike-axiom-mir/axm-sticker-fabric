@@ -5,7 +5,7 @@
   "root": {
     "id": "microforge-demo",
     "version": 1,
-    "digest": "8bb4ef36c4ff0a4b797cc96b2037a95c0380e8327c98f09ba1789b4127b90eb2"
+    "digest": "796482c657d13e5b850baabacc9da2f9308cfeefbb7f925558a3d9306df7466f"
   },
   "counts": {
     "primitive_definitions": 12,
@@ -13,7 +13,7 @@
     "root_definitions": 1,
     "total_definitions": 16,
     "exact_assets": 24,
-    "expanded_records": 65
+    "expanded_records": 67
   },
   "parts": [
     "micro-cube",
