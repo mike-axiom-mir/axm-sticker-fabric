@@ -7,7 +7,7 @@ from pathlib import Path
 import tempfile
 import unittest
 
-from axm_stickers import (Registry, occupancy_slots, save_occupancy_plan,
+from axm_stickers import (Registry, digest, occupancy_slots, save_occupancy_plan,
                           solve_occupancy_plan, validate_occupancy_library,
                           validate_occupancy_plan)
 from axm_stickers.__main__ import main as cli_main
@@ -66,8 +66,8 @@ class OccupancyTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError,'slot may be consumed only once'):
             validate_occupancy_plan(duplicate)
         consumed=copy.deepcopy(self.plan)
-        pins={d['id']:{'id':d['id'],'version':d['version'],
-                       'digest':__import__('axm_stickers').digest(d)} for d in self.library['definitions']}
+        pins={d['id']:{'id':d['id'],'version':d['version'],'digest':digest(d)}
+              for d in self.library['definitions']}
         consumed['base']['instances'].append({'id':'base-bearing','sticker':pins['micro-hub']})
         consumed['base']['connections'].append(
             {'a':{'instance':'axle','port':'positive'},'b':{'instance':'base-bearing','port':'center'}})
