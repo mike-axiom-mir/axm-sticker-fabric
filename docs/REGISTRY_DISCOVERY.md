@@ -83,7 +83,9 @@ fitness for an unstated purpose.
 
 Returns registry version, sticker id/version counts, shared asset count/bytes,
 known link count, attachment-space counts, adapter counts and dependency-index
-state counts.
+state counts. `adapter_limit` is explicit and bounded to 1..4096 (default 256);
+when more distinct adapters exist, `adapter_truncated` is true rather than
+silently implying the returned adapter breakdown is complete.
 
 ## Machine and human parity
 
