@@ -27,9 +27,10 @@ def _pin(value):
 def _roles(value):
     if not isinstance(value, list) or not 1 <= len(value) <= MAX_ACCEPTS:
         raise ValueError(f'port accepts requires 1..{MAX_ACCEPTS} roles')
-    if len(value) != len(set(value)):
+    checked = [identifier(role) for role in value]
+    if len(checked) != len(set(checked)):
         raise ValueError('port accepts roles must be unique')
-    return [identifier(role) for role in value]
+    return checked
 
 
 def validate_profile(profile, definition=None):
