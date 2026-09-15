@@ -7,7 +7,7 @@ output remains an ordinary immutable sticker v1 assembly.
 import copy
 
 from .assembly import ASSEMBLY, MAX_DEPTH, MAX_PARTS, save_assembly
-from .core import digest, encode, identifier, instance, resolve, sha, validate, version
+from .core import digest, encode, identifier, instance, resolve, sha, version
 from .interfaces import InterfaceCatalog, interface_profile, port
 from .placement import attachment_matrix, identity, inverse_rigid, multiply, rigid
 
@@ -54,9 +54,7 @@ def validate_selection(value):
     encode(result); return result
 
 
-def _scale(placed):
-    value=placed.get('placement',{}).get('scale',1)
-    return value
+def _scale(placed): return placed.get('placement',{}).get('scale',1)
 
 
 def _addressable(registry,root):
@@ -76,6 +74,8 @@ def _addressable(registry,root):
             placed_child=child['instance']; pin=placed_child.get('sticker',{})
             child_definition=registry.get(pin.get('id'),pin.get('version'))
             resolve(child_definition,placed_child)
+            child_digest=digest(child_definition)
+            if child_digest in ancestors: raise ValueError('cyclic selection source assembly')
             child_path=path+'/'+identifier(placed_child.get('id'))
             target=child['target']
             if not isinstance(target,dict) or set(target) != {'space','socket','frame'} or target['space']!='3d':
@@ -89,11 +89,9 @@ def _addressable(registry,root):
                                  'local_world':local_world,'motion':copy.deepcopy(child['motion']),
                                  'clip':child['clip'],'parent_frame':copy.deepcopy(parent_frame)}
             if child_definition['adapter']==ASSEMBLY:
-                if _scale(placed_child) != 1:
-                    blocked.append(child_path)
-                else:
-                    visit(child_definition,placed_child,rigid(local_world),child_path,
-                          ancestors+(digest(child_definition),))
+                if _scale(placed_child) != 1: blocked.append(child_path)
+                else: visit(child_definition,placed_child,rigid(local_world),child_path,
+                            ancestors+(child_digest,))
     visit(root,instance(root,'root'),identity(),'root',(digest(root),))
     return records,blocked
 
@@ -115,8 +113,7 @@ def selection_manifest(registry,source):
 def _child_id(path,record,counts,index):
     original=record['instance']['id']
     if counts[original] == 1: return original
-    suffix=digest({'path':path})[:8]
-    base=original[:67]
+    suffix=digest({'path':path})[:8]; base=original[:62]
     return identifier(f'{base}-copy-{index:03d}-{suffix}')
 
 
@@ -143,7 +140,7 @@ def extract_selection(registry,selection):
             if any(path.startswith(prefix+'/') for prefix in blocked):
                 raise ValueError('selection cannot flatten through a scaled assembly ancestor')
             raise ValueError('selection path does not exist in source assembly')
-    anchor_frame=records[checked['anchor']]['target_world']; rebase=inverse_rigid(anchor_frame)
+    rebase=inverse_rigid(records[checked['anchor']]['target_world'])
     originals=[records[path]['instance']['id'] for path in checked['paths']]
     counts={value:originals.count(value) for value in set(originals)}
     children=[]; items=[]
