@@ -267,6 +267,8 @@ def build_library():
         child('micro-beam','cross-z-b',ry(90,0,.35,.72)),
         child('micro-column','mast-a',identity(-.55,.62,0)),
         child('micro-column','mast-b',identity(.55,.62,0)),
+        child('micro-cube','core-block',identity(0,.42,0)),
+        child('micro-brace','brace',ry(45,0,.72,0)),
     ])
     assembly('microforge-demo','Microforge nested demo',
              ['micro','assembly','demo','nested'],root)
