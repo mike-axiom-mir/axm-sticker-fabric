@@ -74,6 +74,7 @@ class MathFamilyTests(unittest.TestCase):
         family = wheel_family()
         family["parameters"]["radius"].update({"unit": "cm", "min": 20.0, "max": 100.0, "default": 50.0})
         family["variants"]["compact"]["radius"] = 35.0
+        family["variants"]["large"]["radius"] = 80.0
         result = resolve_family(family, variant="compact")
         self.assertAlmostEqual(result["derived"]["circumference"]["value"], math.tau * 0.35)
         self.assertAlmostEqual(result["parameters"]["radius"]["base_value"], 0.35)
