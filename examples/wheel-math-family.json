@@ -1,0 +1,77 @@
+{
+  "schema": "axm.math-family/v1",
+  "id": "wheel",
+  "parameters": {
+    "radius": {
+      "unit": "m",
+      "min": 0.2,
+      "max": 1.0,
+      "default": 0.5,
+      "truth": "measured",
+      "uncertainty": 0.002,
+      "source": "example measured family"
+    },
+    "hub_radius": {
+      "unit": "m",
+      "min": 0.05,
+      "max": 0.4,
+      "default": 0.15,
+      "truth": "empirical",
+      "source": "example design range"
+    }
+  },
+  "variants": {
+    "compact": {
+      "radius": 0.35,
+      "hub_radius": 0.1
+    },
+    "large": {
+      "radius": 0.8,
+      "hub_radius": 0.2
+    }
+  },
+  "derived": {
+    "circumference": {
+      "unit": "m",
+      "truth": "exact",
+      "expr": {
+        "op": {
+          "name": "mul",
+          "args": [
+            {"const": "tau"},
+            {"param": "radius"}
+          ]
+        }
+      }
+    },
+    "hub_ratio": {
+      "unit": "ratio",
+      "truth": "exact",
+      "expr": {
+        "op": {
+          "name": "div",
+          "args": [
+            {"param": "hub_radius"},
+            {"param": "radius"}
+          ]
+        }
+      }
+    }
+  },
+  "constraints": [
+    {
+      "label": "hub_within_wheel",
+      "left": {"param": "hub_radius"},
+      "op": "le",
+      "right": {
+        "op": {
+          "name": "mul",
+          "args": [
+            {"param": "radius"},
+            0.45
+          ]
+        }
+      }
+    }
+  ]
+}
