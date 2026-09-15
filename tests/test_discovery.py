@@ -68,6 +68,31 @@ class DiscoveryTests(unittest.TestCase):
             self.assertEqual(stats['registry_version'],REGISTRY_VERSION)
             self.assertEqual(stats['stickers'],{'ids':1,'versions':1})
             self.assertEqual(stats['by_space'],{'3d':1})
+            self.assertFalse(stats['adapter_truncated'])
+
+    def test_dependency_availability_distinguishes_missing_and_digest_mismatch(self):
+        with Registry(self.root/'registry.sqlite') as r:
+            expected=definition('target')
+            group=definition('group',adapter=ASSEMBLY_ADAPTER,
+                recipe={'children':[{'instance':instance(expected,'child'),
+                                     'target':{'space':'3d','socket':'mount','frame':identity()},
+                                     'motion':None,'clip':None}]})
+            r.register(group)
+            self.assertEqual(r.dependencies('group',1)['entries'][0]['availability'],'missing')
+            different=definition('target',tags=['different'])
+            r.register(different)
+            self.assertEqual(r.dependencies('group',1)['entries'][0]['availability'],'digest_mismatch')
+
+    def test_stats_adapter_breakdown_has_explicit_truncation(self):
+        with Registry(self.root/'registry.sqlite') as r:
+            a=definition('a')
+            b=definition('b'); b['adapter']='other.adapter/v1'
+            r.register_many([a,b])
+            stats=r.stats(adapter_limit=1)
+            self.assertEqual(len(stats['by_adapter']),1)
+            self.assertTrue(stats['adapter_truncated'])
+            with self.assertRaises(ValueError):
+                r.stats(adapter_limit=0)
 
     def test_known_malformed_dependency_contract_is_visible_not_guessed(self):
         with Registry(self.root/'registry.sqlite') as r:
@@ -87,15 +112,16 @@ class DiscoveryTests(unittest.TestCase):
             'CREATE INDEX sticker_adapter ON stickers(adapter,socket)',
             'CREATE INDEX sticker_tags ON tags(tag,id,version)'):
             db.execute(sql)
+        stored=json.dumps(d,sort_keys=True,separators=(',',':'))
         db.execute('INSERT INTO stickers VALUES (?,?,?,?,?,?)',
-                   (d['id'],d['version'],digest(d),d['adapter'],d['attachment']['socket'],
-                    json.dumps(d,sort_keys=True,separators=(',',':'))))
+                   (d['id'],d['version'],digest(d),d['adapter'],d['attachment']['socket'],stored))
         db.execute('INSERT INTO tags VALUES (?,?,?)',('legacy',1,'old'))
         db.execute(f'PRAGMA application_id={APP}'); db.execute('PRAGMA user_version=1')
         db.commit(); db.close()
 
         with Registry(path) as r:
             self.assertEqual(r.db.execute('PRAGMA user_version').fetchone()[0],REGISTRY_VERSION)
+            self.assertEqual(r.db.execute('SELECT body FROM stickers WHERE id=? AND version=?',('legacy',1)).fetchone()[0],stored)
             self.assertEqual([x['id'] for x in r.search(space='3d',tags=['old'])['entries']],['legacy'])
 
 
