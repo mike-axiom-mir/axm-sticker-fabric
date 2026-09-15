@@ -19,10 +19,11 @@ Requests are ordinary JSON, identical for human/script/AI callers. Operations:
 `register`, `register_many`, `get`, `search`, `dependencies`, `dependents`,
 `describe`, `stats`, `instance`, `bundle`, `import_bundle`, `save_assembly`,
 `library_bundle`, `import_library`, `interface_compatible`,
-`solve_connection_plan`, and `save_connection_plan`. A saved group has immutable
-versions and exact child pins; placement overrides never overwrite source. The
-registry stores shared source bytes once, with author/license/source metadata,
-indexed discovery and atomic portable import. No account is needed.
+`solve_connection_plan`, `save_connection_plan`, `verify_loop_closures`, and
+`save_closed_connection_plan`. A saved group has immutable versions and exact
+child pins; placement overrides never overwrite source. The registry stores
+shared source bytes once, with author/license/source metadata, indexed discovery
+and atomic portable import. No account is needed.
 
 The fabric interprets the common definition/assembly contract. Rendering belongs
 to a consumer. UC's `axm-sticker-create` creates procedural 3D parts, captures
@@ -37,7 +38,7 @@ sticker/library bundle formats are unchanged. Existing v1 SQLite registries are
 migrated in place by rebuilding only derived discovery data from their stored
 immutable definitions.
 
-`search` can now combine attachment `space`, adapter/socket, all-required `tags`,
+`search` can combine attachment `space`, adapter/socket, all-required `tags`,
 `any_tags`, and an exact or id/version `depends_on` constraint. `dependencies`
 reports direct assembly children and creative-task dependency pins together with
 whether the pinned source is `exact`, `missing`, or a `digest_mismatch` in the
@@ -79,7 +80,7 @@ reusable saved modules, and one nested demo. The 16 definitions expand to 67
 placed records while shared source assets remain stored once by digest.
 
 The generated output is deliberately reproducible rather than checked in as a
-second ~base64 copy of its binary sources. `examples/microforge-summary.json`
+second base64 copy of its binary sources. `examples/microforge-summary.json`
 pins the expected root digest, IDs and counts, and CI regenerates/imports the
 full library. See [`docs/MICROFORGE_EVIDENCE.md`](docs/MICROFORGE_EVIDENCE.md)
 for what this exercise proves and the concrete v1 limits it exposed.
@@ -131,6 +132,32 @@ plan covering structure/finish/fastener/marker roles and a three-part axle plan
 covering shaft/bearing/wheel roles. See
 [`docs/CONNECTION_PLANS_EXPERIMENT.md`](docs/CONNECTION_PLANS_EXPERIMENT.md).
 
+## Experimental loop closure
+
+Sticker Fabric 0.7.0 keeps the tree solver intact and adds loop **verification**.
+`axm.sticker-closure-set/v0.1` wraps one connection tree with one or more extra
+named-port edges plus explicit translation and rotation-matrix tolerances.
+
+The extra edges never move parts. After the tree is solved, each closure edge
+independently predicts the already-solved frame from both directions and reports
+its numeric residual. A loop passes only when those residuals are inside the
+caller-declared bounds. No snapping, averaging or hidden numerical adjustment is
+performed.
+
+```sh
+python tools/build_microforge_closure_examples.py microforge-loop.json
+```
+
+The first Microforge witness uses two cubes and two beams: three tree edges solve
+the path out and back, while a fourth unused named-port edge checks that the
+return beam lands on the unused opposite face of the root cube. A passing witness
+still does not claim non-overlapping or physically useful geometry.
+
+`save_closed_connection_plan` refuses to save when any closure witness fails. On
+success it saves only the compiled ordinary v1 assembly, so replay remains free
+of the experimental closure/profile layers. See
+[`docs/LOOP_CLOSURE_EXPERIMENT.md`](docs/LOOP_CLOSURE_EXPERIMENT.md).
+
 ## What this seed contains
 
 - Executable registry, parameter controls, placement math, dependency closure.
@@ -141,6 +168,8 @@ covering shaft/bearing/wheel roles. See
   registry-verified compatibility discovery and machine-checkable mutual roles.
 - Experimental named-port connection trees that deterministically compile into
   stable v1 saved assemblies.
+- Experimental loop-closure witnesses that verify additional rigid constraints
+  without changing solved transforms.
 - Save groups, portable libraries, batch registration and machine/human CLI.
 - Standard-library tests and independent installed-package CI.
 - Pinned upstream origin, license, and file hashes in `UPSTREAM.json` / `NOTICE`.
