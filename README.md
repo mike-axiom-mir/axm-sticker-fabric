@@ -20,11 +20,12 @@ Requests are ordinary JSON, identical for human/script/AI callers. Operations:
 `describe`, `stats`, `instance`, `bundle`, `import_bundle`, `save_assembly`,
 `library_bundle`, `import_library`, `interface_compatible`,
 `solve_connection_plan`, `save_connection_plan`, `verify_loop_closures`,
-`save_closed_connection_plan`, `occupancy_slots`, `solve_occupancy_plan`, and
-`save_occupancy_plan`. A saved group has immutable versions and exact child pins;
-placement overrides never overwrite source. The registry stores shared source
-bytes once, with author/license/source metadata, indexed discovery and atomic
-portable import. No account is needed.
+`save_closed_connection_plan`, `occupancy_slots`, `solve_occupancy_plan`,
+`save_occupancy_plan`, `selection_manifest`, `extract_selection`, and
+`save_selection_as_sticker`. A saved group has immutable versions and exact child
+pins; placement overrides never overwrite source. The registry stores shared
+source bytes once, with author/license/source metadata, indexed discovery and
+atomic portable import. No account is needed.
 
 The fabric interprets the common definition/assembly contract. Rendering belongs
 to a consumer. UC's `axm-sticker-create` creates procedural 3D parts, captures
@@ -135,6 +136,39 @@ state.
 CLI can solve and save occupancy plans. See
 [`docs/MULTI_OCCUPANCY_EXPERIMENT.md`](docs/MULTI_OCCUPANCY_EXPERIMENT.md).
 
+## Save part of a design as a sticker
+
+Sticker Fabric 0.9.0 adds structural copy/paste for exact saved 3D assemblies.
+`axm.sticker-selection/v0.1` pins one exact source design, names exact instance
+paths inside that design, and chooses one selected path as the new local pivot.
+
+`selection_manifest` lists addressable paths for an exact source sticker.
+`extract_selection` previews the copy without mutating the Registry.
+`save_selection_as_sticker` rebases the selected pieces and saves them as an
+ordinary `axm.sticker.assembly-3d/v1` sticker while retaining their exact child
+pins and dependency closure.
+
+The saved sticker records exact provenance back to the source design and returns
+a receipt mapping source paths to new child instance IDs. Duplicate nested local
+IDs are renamed deterministically. Motion frames are rebased rather than dropped.
+
+A caller may explicitly expose existing named ports from selected pieces on the
+new sticker. Their interface/role semantics are copied from the exact source
+profiles and their frames are transformed into the new sticker's local space.
+This preserves known connection evidence without guessing which boundaries ought
+to become public.
+
+The first Microforge regression selects `beam-x`, `column`, and `cap` from inside
+`corner-0` of the nested `microforge-demo`, pivots around the beam, saves the
+three-piece selection as a new reusable sticker, exports exact portable closure,
+and preserves chosen beam/column ports.
+
+Selection capture is structural, not visual inference. v0.9 does not crop a
+screenshot, segment a mesh, or guess what nearby objects belong together. It also
+refuses to flatten through a scaled ancestor assembly when that scale cannot be
+faithfully represented as rigid child targets. See
+[`docs/SELECTION_CAPTURE_EXPERIMENT.md`](docs/SELECTION_CAPTURE_EXPERIMENT.md).
+
 ## What this seed contains
 
 - Executable registry, parameter controls, placement math and dependency closure.
@@ -144,6 +178,7 @@ CLI can solve and save occupancy plans. See
 - Named-port connection trees that compile into stable v1 saved assemblies.
 - Loop-closure witnesses that verify extra rigid constraints without changing solved transforms.
 - Explicit multi-occupancy slots for bounded shared-port capacity.
+- Exact structural selection capture so part of a larger design can become a new reusable sticker.
 - Save groups, portable libraries, batch registration and machine/human JSON CLI.
 - Standard-library tests and independent installed-package CI.
 - Pinned upstream origin, license and file hashes in `UPSTREAM.json` / `NOTICE`.
