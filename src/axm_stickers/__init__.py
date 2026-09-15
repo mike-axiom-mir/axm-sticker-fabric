@@ -12,6 +12,8 @@ from .occupancy import (compile_occupancy_plan, occupancy_profile, occupancy_slo
                         save_occupancy_plan, solve_occupancy_plan,
                         validate_occupancy_library, validate_occupancy_plan,
                         validate_occupancy_profile)
+from .selection import (extract_selection, save_selection_as_sticker,
+                        selection_manifest, validate_selection)
 
 __all__ = ['Registry', 'digest', 'instance', 'resolve', 'validate',
            'attachment_matrix', 'placement_2d', 'InterfaceCatalog',
@@ -23,4 +25,5 @@ __all__ = ['Registry', 'digest', 'instance', 'resolve', 'validate',
            'verify_loop_closures', 'compile_occupancy_plan', 'occupancy_profile',
            'occupancy_slots', 'save_occupancy_plan', 'solve_occupancy_plan',
            'validate_occupancy_library', 'validate_occupancy_plan',
-           'validate_occupancy_profile']
+           'validate_occupancy_profile', 'extract_selection',
+           'save_selection_as_sticker', 'selection_manifest', 'validate_selection']
