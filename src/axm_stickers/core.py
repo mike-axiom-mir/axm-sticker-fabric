@@ -15,9 +15,14 @@ import sqlite3
 SCHEMA = 'axm.sticker/v1'
 BUNDLE = 'axm.sticker-bundle/v1'
 INSTANCE = 'axm.sticker-instance/v1'
+DESCRIPTION = 'axm.sticker-description/v1'
+REGISTRY_STATS = 'axm.sticker-registry-stats/v1'
 MAX_JSON = 2 * 1024 * 1024
 MAX_ASSETS = 32 * 1024 * 1024
 APP = 0x41585354
+REGISTRY_VERSION = 2
+ASSEMBLY_ADAPTER = 'axm.sticker.assembly-3d/v1'
+CREATIVE_ADAPTER = 'axm.sticker.creative-task/v1'
 
 
 def encode(value):
@@ -54,6 +59,55 @@ def sha(value):
     if not isinstance(value, str) or not re.fullmatch('[a-f0-9]{64}', value):
         raise ValueError('expected SHA-256 digest')
     return value
+
+
+def _pin(value):
+    if not isinstance(value, dict) or set(value) != {'id','version','digest'}:
+        raise ValueError('dependency requires exact version pin')
+    identifier(value['id']); version(value['version']); sha(value['digest'])
+    return {'id':value['id'],'version':value['version'],'digest':value['digest']}
+
+
+def _identifier_list(value, *, maximum=32):
+    if value is None:
+        return []
+    if not isinstance(value, list) or len(value) > maximum or len(value) != len(set(map(str,value))):
+        raise ValueError(f'expected at most {maximum} unique identifiers')
+    return [identifier(item) for item in value]
+
+
+def _known_dependencies(definition):
+    """Return declarative dependency links plus how completely they were understood.
+
+    The registry only indexes contracts it knows exactly. Unknown adapters are not
+    guessed; malformed known contracts are surfaced as malformed instead of being
+    silently treated as dependency-free.
+    """
+    recipe = definition['recipe']
+    records = []
+    try:
+        if definition['adapter'] == ASSEMBLY_ADAPTER:
+            if set(recipe) != {'children'} or not isinstance(recipe['children'], list):
+                return [], 'malformed'
+            for position, child in enumerate(recipe['children']):
+                if not isinstance(child, dict) or 'instance' not in child:
+                    return [], 'malformed'
+                placed = child['instance']
+                if not isinstance(placed, dict) or 'sticker' not in placed:
+                    return [], 'malformed'
+                records.append(('child', position, _pin(placed['sticker'])))
+            return records, 'indexed'
+        if definition['adapter'] == CREATIVE_ADAPTER:
+            if 'dependencies' not in recipe or not isinstance(recipe['dependencies'], list):
+                return [], 'malformed'
+            if len(recipe['dependencies']) > 256:
+                return [], 'malformed'
+            for position, pin in enumerate(recipe['dependencies']):
+                records.append(('dependency', position, _pin(pin)))
+            return records, 'indexed'
+    except ValueError:
+        return [], 'malformed'
+    return [], 'not_declared'
 
 
 def _parameter(spec, value):
@@ -187,7 +241,7 @@ def resolve(definition, placed):
 
 
 class Registry:
-    """One offline file: indexed metadata and shared exact asset bytes."""
+    """One offline file: indexed metadata, composition graph and exact asset bytes."""
     def __init__(self,path):
         self.db = sqlite3.connect(Path(path), timeout=35, isolation_level=None)
         self.db.row_factory = sqlite3.Row
@@ -199,7 +253,8 @@ class Registry:
                 tables = self.db.execute("SELECT name FROM sqlite_master WHERE type='table'").fetchall()
                 if app != APP and (app or tables): raise ValueError('not a sticker registry')
                 v = self.db.execute('PRAGMA user_version').fetchone()[0]
-                if v not in (0,1) or (app == APP and v != 1): raise ValueError('unsupported registry version')
+                if v not in (0,1,REGISTRY_VERSION) or (app == APP and v not in (1,REGISTRY_VERSION)):
+                    raise ValueError('unsupported registry version')
                 if not tables:
                     for sql in (
                         'CREATE TABLE assets (digest TEXT PRIMARY KEY, body BLOB NOT NULL)',
@@ -210,10 +265,46 @@ class Registry:
                         self.db.execute(sql)
                     self.db.execute(f'PRAGMA application_id={APP}')
                     self.db.execute('PRAGMA user_version=1')
+                    v = 1
+                if v == 1:
+                    self._create_discovery_tables()
+                    self._rebuild_discovery_index()
+                    self.db.execute(f'PRAGMA user_version={REGISTRY_VERSION}')
+                present = {row[0] for row in self.db.execute(
+                    "SELECT name FROM sqlite_master WHERE type='table'")}
+                required = {'assets','stickers','tags','discovery','links'}
+                if not required <= present:
+                    raise ValueError('corrupt sticker registry schema')
             size = self.db.execute('PRAGMA page_size').fetchone()[0]
             self.db.execute(f'PRAGMA max_page_count={512*1024*1024//size}')
         except BaseException:
             self.db.close(); raise
+
+    def _create_discovery_tables(self):
+        for sql in (
+            'CREATE TABLE IF NOT EXISTS discovery (id TEXT, version INTEGER, space TEXT NOT NULL, dependency_state TEXT NOT NULL, PRIMARY KEY(id,version), FOREIGN KEY(id,version) REFERENCES stickers(id,version) ON DELETE CASCADE)',
+            'CREATE TABLE IF NOT EXISTS links (source_id TEXT, source_version INTEGER, relation TEXT, position INTEGER, target_id TEXT, target_version INTEGER, target_digest TEXT, PRIMARY KEY(source_id,source_version,relation,position), FOREIGN KEY(source_id,source_version) REFERENCES stickers(id,version) ON DELETE CASCADE)',
+            'CREATE INDEX IF NOT EXISTS sticker_space ON discovery(space,id,version)',
+            'CREATE INDEX IF NOT EXISTS link_target ON links(target_id,target_version,target_digest,source_id,source_version)'):
+            self.db.execute(sql)
+
+    def _rebuild_discovery_index(self):
+        self.db.execute('DELETE FROM links')
+        self.db.execute('DELETE FROM discovery')
+        for row in self.db.execute('SELECT body FROM stickers ORDER BY rowid').fetchall():
+            self._index_definition(validate(json.loads(row[0])))
+
+    def _index_definition(self,definition):
+        records,state = _known_dependencies(definition)
+        self.db.execute('DELETE FROM links WHERE source_id=? AND source_version=?',
+                        (definition['id'],definition['version']))
+        self.db.execute('INSERT OR REPLACE INTO discovery VALUES (?,?,?,?)',
+                        (definition['id'],definition['version'],
+                         definition['attachment']['space'],state))
+        for relation,position,pin in records:
+            self.db.execute('INSERT INTO links VALUES (?,?,?,?,?,?,?)',
+                            (definition['id'],definition['version'],relation,position,
+                             pin['id'],pin['version'],pin['digest']))
 
     @contextmanager
     def _write(self):
@@ -268,8 +359,8 @@ class Registry:
         for tag in definition['tags']:
             self.db.execute('INSERT OR IGNORE INTO tags VALUES (?,?,?)',
                             (definition['id'],definition['version'],tag))
+        self._index_definition(definition)
         return {'id':definition['id'],'version':definition['version'],'digest':key}
-
 
     def get(self,id,ver):
         identifier(id); version(ver)
@@ -286,24 +377,116 @@ class Registry:
             raise ValueError('missing or corrupt asset')
         return row[0]
 
-    def search(self, *, adapter=None, socket=None, tag=None, after=0, limit=30):
+    def search(self, *, adapter=None, socket=None, space=None, tag=None, tags=None,
+               any_tags=None, depends_on=None, after=0, limit=30):
         if type(after) is not int or after < 0 or type(limit) is not int or not 1 <= limit <= 100:
             raise ValueError('invalid search cursor/limit')
         clauses,values = ['s.rowid>?'],[after]
         for key,value in (('adapter',adapter),('socket',socket)):
             if value is not None: text(value,120); clauses.append(f's.{key}=?'); values.append(value)
+        if space is not None:
+            if space not in ('2d','3d'): raise ValueError('unknown attachment space')
+            clauses.append('d.space=?'); values.append(space)
+        all_tags = _identifier_list(tags)
         if tag is not None:
-            identifier(tag)
+            all_tags = [identifier(tag)] + all_tags
+        if len(all_tags) != len(set(all_tags)):
+            raise ValueError('duplicate required tag')
+        for required in all_tags:
             clauses.append('EXISTS (SELECT 1 FROM tags t WHERE t.id=s.id AND t.version=s.version AND t.tag=?)')
-            values.append(tag)
-        rows = self.db.execute('SELECT s.rowid,s.body,s.digest FROM stickers s WHERE '+
-                               ' AND '.join(clauses)+' ORDER BY s.rowid LIMIT ?',values+[limit]).fetchall()
+            values.append(required)
+        any_tags = _identifier_list(any_tags)
+        if any_tags:
+            placeholders=','.join('?' for _ in any_tags)
+            clauses.append(f'EXISTS (SELECT 1 FROM tags t WHERE t.id=s.id AND t.version=s.version AND t.tag IN ({placeholders}))')
+            values.extend(any_tags)
+        if depends_on is not None:
+            if not isinstance(depends_on,dict) or set(depends_on) not in ({'id','version'},{'id','version','digest'}):
+                raise ValueError('depends_on requires id/version and optional digest')
+            identifier(depends_on['id']); version(depends_on['version'])
+            clause = ('EXISTS (SELECT 1 FROM links l WHERE l.source_id=s.id AND l.source_version=s.version '
+                      'AND l.target_id=? AND l.target_version=?')
+            values.extend([depends_on['id'],depends_on['version']])
+            if 'digest' in depends_on:
+                sha(depends_on['digest']); clause += ' AND l.target_digest=?'; values.append(depends_on['digest'])
+            clauses.append(clause+')')
+        rows = self.db.execute(
+            'SELECT s.rowid,s.body,s.digest FROM stickers s JOIN discovery d ON d.id=s.id AND d.version=s.version WHERE '+
+            ' AND '.join(clauses)+' ORDER BY s.rowid LIMIT ?',values+[limit]).fetchall()
         results = []
         for row in rows:
             d = json.loads(row[1])
             results.append({k:d[k] for k in ('id','version','name','tags','adapter','attachment','origin')}
                            | {'digest':row[2]})
         return {'entries':results,'next_cursor':rows[-1][0] if rows else after}
+
+    def dependencies(self,id,ver):
+        definition = self.get(id,ver)
+        state = self.db.execute('SELECT dependency_state FROM discovery WHERE id=? AND version=?',
+                                (id,ver)).fetchone()
+        rows = self.db.execute(
+            'SELECT relation,position,target_id,target_version,target_digest FROM links '
+            'WHERE source_id=? AND source_version=? ORDER BY relation,position',(id,ver)).fetchall()
+        entries=[]
+        for row in rows:
+            target=self.db.execute('SELECT digest FROM stickers WHERE id=? AND version=?',
+                                   (row['target_id'],row['target_version'])).fetchone()
+            availability = ('missing' if target is None else
+                            'exact' if target['digest']==row['target_digest'] else 'digest_mismatch')
+            entries.append({'relation':row['relation'],'position':row['position'],
+                            'sticker':{'id':row['target_id'],'version':row['target_version'],
+                                       'digest':row['target_digest']},
+                            'availability':availability})
+        return {'sticker':{'id':definition['id'],'version':definition['version'],
+                           'digest':digest(definition)},
+                'index_state':state['dependency_state'],'entries':entries}
+
+    def dependents(self,id,ver,*,after=0,limit=100):
+        definition=self.get(id,ver); key=digest(definition)
+        if type(after) is not int or after < 0 or type(limit) is not int or not 1 <= limit <= 100:
+            raise ValueError('invalid search cursor/limit')
+        rows=self.db.execute(
+            'SELECT l.rowid,l.relation,l.position,s.id,s.version,s.digest FROM links l '
+            'JOIN stickers s ON s.id=l.source_id AND s.version=l.source_version '
+            'WHERE l.rowid>? AND l.target_id=? AND l.target_version=? AND l.target_digest=? '
+            'ORDER BY l.rowid LIMIT ?',(after,id,ver,key,limit)).fetchall()
+        entries=[{'relation':row['relation'],'position':row['position'],
+                  'sticker':{'id':row['id'],'version':row['version'],'digest':row['digest']}}
+                 for row in rows]
+        return {'sticker':{'id':id,'version':ver,'digest':key},'entries':entries,
+                'next_cursor':rows[-1]['rowid'] if rows else after}
+
+    def describe(self,id,ver):
+        definition=self.get(id,ver); key=digest(definition)
+        references=sorted(set(definition['assets'].values()))
+        total=sum(len(self.asset(reference)) for reference in references)
+        dependent_count=self.db.execute(
+            'SELECT count(*) FROM links WHERE target_id=? AND target_version=? AND target_digest=?',
+            (id,ver,key)).fetchone()[0]
+        deps=self.dependencies(id,ver)
+        return {'schema':DESCRIPTION,'sticker':{'id':id,'version':ver,'digest':key},
+                'metadata':{k:copy.deepcopy(definition[k]) for k in
+                            ('name','tags','adapter','attachment','origin')},
+                'parameters':sorted(definition['parameters']),
+                'assets':{'count':len(references),'bytes':total,'names':sorted(definition['assets'])},
+                'dependencies':{'index_state':deps['index_state'],'entries':deps['entries']},
+                'dependents':{'count':dependent_count}}
+
+    def stats(self):
+        sticker_versions=self.db.execute('SELECT count(*) FROM stickers').fetchone()[0]
+        sticker_ids=self.db.execute('SELECT count(DISTINCT id) FROM stickers').fetchone()[0]
+        assets=self.db.execute('SELECT count(*),coalesce(sum(length(body)),0) FROM assets').fetchone()
+        links=self.db.execute('SELECT count(*) FROM links').fetchone()[0]
+        by_space={row['space']:row['n'] for row in self.db.execute(
+            'SELECT space,count(*) AS n FROM discovery GROUP BY space ORDER BY space')}
+        by_adapter={row['adapter']:row['n'] for row in self.db.execute(
+            'SELECT adapter,count(*) AS n FROM stickers GROUP BY adapter ORDER BY adapter')}
+        states={row['dependency_state']:row['n'] for row in self.db.execute(
+            'SELECT dependency_state,count(*) AS n FROM discovery GROUP BY dependency_state ORDER BY dependency_state')}
+        return {'schema':REGISTRY_STATS,'registry_version':REGISTRY_VERSION,
+                'stickers':{'ids':sticker_ids,'versions':sticker_versions},
+                'assets':{'count':assets[0],'bytes':assets[1]},'links':links,
+                'by_space':by_space,'by_adapter':by_adapter,'dependency_index':states}
 
     def bundle(self,id,ver):
         definition = self.get(id,ver)
