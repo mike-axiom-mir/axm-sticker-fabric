@@ -1,5 +1,7 @@
 """Portable sticker definitions and registry; Python standard library only."""
 from .core import Registry, digest, instance, resolve, validate
+from .domains import domain_catalog, domain_family
+from .math import convert, resolve_family, unit_info, validate_family, value_map
 from .placement import attachment_matrix, placement_2d
 from .interfaces import (InterfaceCatalog, assembly_target, interface_profile,
                          match_interfaces, mate_frame, validate_profile,
@@ -16,6 +18,8 @@ from .selection import (extract_selection, save_selection_as_sticker,
                         selection_manifest, validate_selection)
 
 __all__ = ['Registry', 'digest', 'instance', 'resolve', 'validate',
+           'convert', 'resolve_family', 'unit_info', 'validate_family', 'value_map',
+           'domain_catalog', 'domain_family',
            'attachment_matrix', 'placement_2d', 'InterfaceCatalog',
            'assembly_target', 'interface_profile', 'match_interfaces', 'mate_frame',
            'validate_profile', 'validate_profile_library',
