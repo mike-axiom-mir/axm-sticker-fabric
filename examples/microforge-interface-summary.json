@@ -1,0 +1,21 @@
+{
+  "schema": "axm.microforge-interface-example/v0.1",
+  "generator": "tools/build_microforge_interfaces.py",
+  "profile_schema": "axm.sticker-interface-profile/v0.1",
+  "library_schema": "axm.sticker-interface-library/v0.1",
+  "counts": {
+    "profiles": 12,
+    "named_ports": 28
+  },
+  "example_matches": [
+    "micro-beam:right <-> micro-brace:left (micro-structure; structure/brace)",
+    "micro-axle:positive <-> micro-wheel:center (micro-axle; shaft/wheel)",
+    "micro-plate:fastener-ne <-> micro-pin:bottom (micro-fastener; panel/fastener)",
+    "micro-plate:marker-seat <-> micro-marker:base (micro-marker; panel/marker)"
+  ],
+  "truth_boundary": [
+    "Profiles are exact-pin companion authoring data and do not modify axm.sticker/v1 definitions.",
+    "A successful interface/role match proves declared compatibility only; it does not prove geometry fit, collision clearance, physics, load capacity, or aesthetics.",
+    "Mating produces an ordinary rigid target frame that can be saved into a standard v1 assembly without retaining the experimental profile as a replay dependency."
+  ]
+}

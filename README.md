@@ -16,31 +16,179 @@ axm-stickers parts.sqlite request.json
 ```
 
 Requests are ordinary JSON, identical for human/script/AI callers. Operations:
-`register`, `register_many`, `get`, `search`, `instance`, `bundle`, `import_bundle`,
-`save_assembly`, `library_bundle`, `import_library`. A saved group has immutable
-versions and exact child pins; placement overrides never overwrite source.
-The registry stores shared source bytes once, with author/license/source
-metadata, indexed discovery and atomic portable import. No account is needed.
+`register`, `register_many`, `get`, `search`, `dependencies`, `dependents`,
+`describe`, `stats`, `instance`, `bundle`, `import_bundle`, `save_assembly`,
+`library_bundle`, `import_library`, `interface_compatible`,
+`solve_connection_plan`, `save_connection_plan`, `verify_loop_closures`,
+`save_closed_connection_plan`, `occupancy_slots`, `solve_occupancy_plan`,
+`save_occupancy_plan`, `selection_manifest`, `extract_selection`, and
+`save_selection_as_sticker`. A saved group has immutable versions and exact child
+pins; placement overrides never overwrite source. The registry stores shared
+source bytes once, with author/license/source metadata, indexed discovery and
+atomic portable import. No account is needed.
 
 The fabric interprets the common definition/assembly contract. Rendering belongs
 to a consumer. UC's `axm-sticker-create` creates procedural 3D parts, captures
 existing GLBs or editable Studio layers, saves nested groups, and exports actual
 animated GLB assemblies. See [UC assembly authoring](https://github.com/mike-axiom-mir/axm-universal-creation/blob/main/docs/STICKER_ASSEMBLIES.md).
 
-## What this first seed contains
+## Registry discovery
 
-- Executable registry, parameter controls, placement math, dependency closure.
-- Save groups, portable libraries, batch registration and machine/human CLI.
+Registry v2 adds a deterministic composition index around the existing immutable
+sticker definitions. The sticker schema remains `axm.sticker/v1`; portable
+sticker/library bundle formats are unchanged. Existing v1 SQLite registries are
+migrated in place by rebuilding only derived discovery data from their stored
+immutable definitions.
+
+`search` can combine attachment `space`, adapter/socket, all-required `tags`,
+`any_tags`, and an exact or id/version `depends_on` constraint. `dependencies`
+reports direct assembly children and creative-task dependency pins together with
+whether the pinned source is `exact`, `missing`, or a `digest_mismatch` in the
+local registry. `dependents` walks the reverse edge so tools can discover which
+saved groups or creative tasks reuse a part. `describe` returns bounded factual
+metadata, parameter names, asset byte counts and direct dependency evidence;
+`stats` gives a renderer-free registry inventory.
+
+The index deliberately does not infer hidden relationships. Known assembly and
+creative-task contracts report `indexed`; a malformed known contract reports
+`malformed`; other adapters report `not_declared`. Those states describe what
+the registry can prove, not the visual quality or semantic usefulness of a part.
+See [`docs/REGISTRY_DISCOVERY.md`](docs/REGISTRY_DISCOVERY.md).
+
+## Microforge: small pieces into larger assets
+
+```sh
+python tools/build_microforge_library.py microforge-library.json
+```
+
+Microforge emits a real `axm.sticker-library/v1` bundle with 12 original rigid
+GLB micro-parts, exact retained editable procedural JSON sources, three reusable
+modules and one nested demo. The 16 definitions expand to 67 placed records while
+shared source assets remain stored once by digest. See
+[`docs/MICROFORGE_EVIDENCE.md`](docs/MICROFORGE_EVIDENCE.md).
+
+## Experimental named interfaces
+
+```sh
+python tools/build_microforge_interfaces.py microforge-interfaces.json
+```
+
+`axm.sticker-interface-profile/v0.1` pins one exact sticker version and gives it
+named rigid ports. Each port declares an interface, role, accepted peer roles and
+local mating frame. A match requires same-interface + mutual-role acceptance;
+tags alone are not compatibility evidence. `InterfaceCatalog` validates profiles
+against the Registry and provides bounded compatible-port discovery. See
+[`docs/NAMED_INTERFACES_EXPERIMENT.md`](docs/NAMED_INTERFACES_EXPERIMENT.md).
+
+## Experimental connection plans
+
+Sticker Fabric 0.6.0 grows named ports into bounded construction graphs.
+`axm.sticker-connection-plan/v0.1` contains exact sticker instances, one explicit
+root frame and one connected tree of named-port edges. The solver validates exact
+Registry/profile/port evidence, propagates rigid transforms and compiles the
+result to ordinary `axm.sticker.assembly-3d/v1` children.
+
+```sh
+python tools/build_microforge_connection_plans.py microforge-plans.json
+```
+
+See [`docs/CONNECTION_PLANS_EXPERIMENT.md`](docs/CONNECTION_PLANS_EXPERIMENT.md).
+
+## Experimental loop closure
+
+Sticker Fabric 0.7.0 keeps the tree as the only transform solver and adds loop
+**verification**. `axm.sticker-closure-set/v0.1` adds extra named-port witnesses
+with explicit translation and rotation-matrix tolerances. The witnesses never
+move or optimize parts; they only report whether the already-solved tree satisfies
+the extra constraints.
+
+```sh
+python tools/build_microforge_closure_examples.py microforge-loop.json
+```
+
+`save_closed_connection_plan` refuses to save a failed loop and otherwise saves
+only the compiled v1 assembly. See
+[`docs/LOOP_CLOSURE_EXPERIMENT.md`](docs/LOOP_CLOSURE_EXPERIMENT.md).
+
+## Experimental multi-occupancy
+
+Sticker Fabric 0.8.0 makes one logical named port shareable only through explicit,
+exact-pinned **occupancy slots**. `axm.sticker-occupancy-profile/v0.1` attaches a
+bounded set of named rigid slot offsets beneath one or more existing named ports.
+The underlying interface/role compatibility rules still apply; slots add capacity,
+not new compatibility semantics.
+
+Each slot remains single-use. In the first plan format, occupancy hosts must be
+base-tree instances, a port already consumed by the base tree cannot also host
+occupancy slots, and occupants cannot recursively become new occupancy hosts.
+
+```sh
+python tools/build_microforge_occupancy_examples.py microforge-occupancy.json
+```
+
+The first Microforge proof uses one `micro-axle` `positive` port with three
+explicit slots—hub, wheel and detail—and attaches exact `micro-hub`,
+`micro-wheel` and `micro-disc` instances through distinct seats. The solved
+result compiles to a normal v1 saved assembly with no hidden occupancy runtime
+state.
+
+`occupancy_slots` exposes the declared capacity to scripts/editors; the same JSON
+CLI can solve and save occupancy plans. See
+[`docs/MULTI_OCCUPANCY_EXPERIMENT.md`](docs/MULTI_OCCUPANCY_EXPERIMENT.md).
+
+## Save part of a design as a sticker
+
+Sticker Fabric 0.9.0 adds structural copy/paste for exact saved 3D assemblies.
+`axm.sticker-selection/v0.1` pins one exact source design, names exact instance
+paths inside that design, and chooses one selected path as the new local pivot.
+
+`selection_manifest` lists addressable paths for an exact source sticker.
+`extract_selection` previews the copy without mutating the Registry.
+`save_selection_as_sticker` rebases the selected pieces and saves them as an
+ordinary `axm.sticker.assembly-3d/v1` sticker while retaining their exact child
+pins and dependency closure.
+
+The saved sticker records exact provenance back to the source design and returns
+a receipt mapping source paths to new child instance IDs. Duplicate nested local
+IDs are renamed deterministically. Motion frames are rebased rather than dropped.
+
+A caller may explicitly expose existing named ports from selected pieces on the
+new sticker. Their interface/role semantics are copied from the exact source
+profiles and their frames are transformed into the new sticker's local space.
+This preserves known connection evidence without guessing which boundaries ought
+to become public.
+
+The first Microforge regression selects `beam-x`, `column`, and `cap` from inside
+`corner-0` of the nested `microforge-demo`, pivots around the beam, saves the
+three-piece selection as a new reusable sticker, exports exact portable closure,
+and preserves chosen beam/column ports.
+
+Selection capture is structural, not visual inference. v0.9 does not crop a
+screenshot, segment a mesh, or guess what nearby objects belong together. It also
+refuses to flatten through a scaled ancestor assembly when that scale cannot be
+faithfully represented as rigid child targets. See
+[`docs/SELECTION_CAPTURE_EXPERIMENT.md`](docs/SELECTION_CAPTURE_EXPERIMENT.md).
+
+## What this seed contains
+
+- Executable registry, parameter controls, placement math and dependency closure.
+- Graph-aware discovery for reusable assembly/creative dependencies and reverse use.
+- Deterministic Microforge authoring with retained exact editable source.
+- Exact-pin named interfaces and registry-verified compatibility discovery.
+- Named-port connection trees that compile into stable v1 saved assemblies.
+- Loop-closure witnesses that verify extra rigid constraints without changing solved transforms.
+- Explicit multi-occupancy slots for bounded shared-port capacity.
+- Exact structural selection capture so part of a larger design can become a new reusable sticker.
+- Save groups, portable libraries, batch registration and machine/human JSON CLI.
 - Standard-library tests and independent installed-package CI.
-- Pinned upstream origin, license, and file hashes in `UPSTREAM.json` / `NOTICE`.
+- Pinned upstream origin, license and file hashes in `UPSTREAM.json` / `NOTICE`.
 - Original `examples/rivetwing-library.json`: 15 rigid part sources, saved wing/gear
   groups and the complete 272-placement animated assembly.
-  `examples/create-rivetwing.json` contains reproducible UC authoring requests.
 
 It does not contain a thousand finished sticker designs, a graphical editor,
-mesh wrapping, or an AI that invents parts. Other programs can consume exported
-libraries locally. Add authored designs with exact source and license metadata;
-keep tests/recipes alongside creations so improvements can be reproduced.
+mesh wrapping, automatic packing, geometry-derived fit, or an AI that invents
+parts. Other programs can consume exported libraries locally. Add authored designs
+with exact source/license metadata and keep reproducible evidence beside them.
 
 ## Development and continuity
 
@@ -50,15 +198,3 @@ adopted by UC, never fetched into a live UC process automatically. Preserve
 pinned formats and existing files. Store libraries, not one file per placement.
 
 See `AGENTS.md` for the four-root merge gate and `UPSTREAM.json` for provenance.
-
-Import the shipped example with Python:
-
-```python
-import json
-from axm_stickers import Registry
-from axm_stickers.assembly import import_library
-with Registry("parts.sqlite") as registry:
-    import_library(registry, json.load(open("examples/rivetwing-library.json")))
-```
-
-Then UC can export it through `axm-sticker-create` without installing this repo.
